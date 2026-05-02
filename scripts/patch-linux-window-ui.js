@@ -802,6 +802,53 @@ function applyLinuxOpaqueBackgroundPatch(currentSource) {
   return currentSource;
 }
 
+function applyLinuxAvatarOverlayMouseEventsPatch(currentSource) {
+  const linuxGuard = "process.platform!==`linux`&&";
+  if (
+    currentSource.includes("appearance:`avatarOverlay`") &&
+    currentSource.includes(`let t=${linuxGuard}!this.pointerInteractive`)
+  ) {
+    return currentSource;
+  }
+
+  const avatarOverlayRegex =
+    /(appearance:`avatarOverlay`[\s\S]*?applyPointerInteractivityPolicy\(\)\{let ([A-Za-z_$][\w$]*)=this\.window;if\(\2==null\|\|\2\.isDestroyed\(\)\)\{this\.mousePassthroughEnabled=!1;return\}let ([A-Za-z_$][\w$]*)=)!this\.pointerInteractive/;
+  const match = currentSource.match(avatarOverlayRegex);
+  if (match == null) {
+    console.warn(
+      "WARN: Could not find avatar overlay mouse passthrough policy — skipping Linux avatar overlay mouse patch",
+    );
+    return currentSource;
+  }
+
+  return currentSource.replace(
+    avatarOverlayRegex,
+    `${match[1]}${linuxGuard}!this.pointerInteractive`,
+  );
+}
+
+function applyLinuxAvatarOverlayTightBoundsPatch(currentSource) {
+  const marker = "process.platform===`linux`";
+  const viewportRegex =
+    /([A-Za-z_$][\w$]*)=\{width:356,height:320\}/;
+  const match = currentSource.match(viewportRegex);
+  if (match == null) {
+    console.warn(
+      "WARN: Could not find avatar overlay viewport constant — skipping Linux tight bounds patch",
+    );
+    return currentSource;
+  }
+
+  if (currentSource.includes(`${match[1]}=${marker}`)) {
+    return currentSource;
+  }
+
+  return currentSource.replace(
+    match[0],
+    `${match[1]}=${marker}?{width:148,height:157}:{width:356,height:320}`,
+  );
+}
+
 function findNamedFunctionBody(source, functionName) {
   const functionMatch = source.match(
     new RegExp(`(?:async\\s+)?function\\s+${escapeRegExp(functionName)}\\([^)]*\\)\\{`),
@@ -1703,6 +1750,8 @@ function patchMainBundleSource(source, iconAsset) {
   patched = applyLinuxMenuPatch(patched);
   patched = applyLinuxSetIconPatch(patched, iconAsset);
   patched = applyLinuxOpaqueBackgroundPatch(patched);
+  patched = applyLinuxAvatarOverlayMouseEventsPatch(patched);
+  patched = applyLinuxAvatarOverlayTightBoundsPatch(patched);
   patched = applyLinuxFileManagerPatch(patched);
   patched = applyLinuxTrayPatch(patched, iconPathExpression);
   patched = applyLinuxSingleInstancePatch(patched);
@@ -1966,6 +2015,8 @@ module.exports = {
   applyLinuxAppUpdaterBridgePatch,
   applyLinuxAppUpdaterMenuPatch,
   patchLinuxAppUpdaterBridge,
+  applyLinuxAvatarOverlayMouseEventsPatch,
+  applyLinuxAvatarOverlayTightBoundsPatch,
   applyLinuxFileManagerPatch,
   applyLinuxHotkeyWindowPrewarmPatch,
   applyLinuxQuitGuardPatch,

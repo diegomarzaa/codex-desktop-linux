@@ -106,6 +106,8 @@ Do not assume `codex-app/` is pristine. If behavior differs from `install.sh`, p
   `7z` can return a non-zero status for the `/Applications` symlink inside the DMG. This is currently treated as a warning if a `.app` bundle was still extracted successfully.
 - Launcher and `nvm`:
   GUI launchers often do not inherit the user's shell `PATH`. The generated `start.sh` explicitly searches for `codex`, including common `nvm` locations.
+- Electron runtime validation:
+  Validate downloaded Electron with `ELECTRON_RUN_AS_NODE=1 "$INSTALL_DIR/electron" -p 'process.versions.electron || ""'`; plain `electron --version` can launch the bundled app or report the embedded Node version and is not reliable.
 - CLI preflight:
   Before Electron launches, the generated launcher asks `codex-update-manager` to verify the installed Codex CLI, prompt to install it when it is missing, and update it if the npm package is newer. Terminal launches prompt inline; GUI launches prefer `kdialog` on KDE/Plasma, otherwise `zenity`, before falling back to an actionable desktop notification. Missing-CLI automatic installation is launcher-scoped: the daemon and `codex-update-manager status` report `cli_status: NotInstalled` and may notify, but they do not attempt installation on their own. The check is best-effort: it uses a 1-hour cooldown for npm registry lookups, caches local CLI version reads to keep startup light, falls back to `npm install -g --prefix ~/.local` if a global install fails, and warns instead of blocking app launch when the refresh attempt does not succeed.
 - ASAR patches are independent and fail-soft:
