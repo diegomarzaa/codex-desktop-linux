@@ -104,7 +104,15 @@ download_electron() {
     mkdir -p "$INSTALL_DIR"
     cd "$INSTALL_DIR"
     unzip -qo "$WORK_DIR/electron.zip"
-    chmod 4755 "$INSTALL_DIR/chrome-sandbox" 2>/dev/null || true
+
+    local chrome_sandbox_path="$INSTALL_DIR/chrome-sandbox"
+    if [ -e "$chrome_sandbox_path" ]; then
+        if ! chmod 4755 "$chrome_sandbox_path"; then
+            warn "Failed to set setuid permissions on $chrome_sandbox_path"
+        fi
+    else
+        warn "Expected Electron sandbox binary not found at $chrome_sandbox_path"
+    fi
 
     local runtime_version
     runtime_version="$(ELECTRON_RUN_AS_NODE=1 "$INSTALL_DIR/electron" -p 'process.versions.electron || ""' 2>/dev/null || true)"
