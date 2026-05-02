@@ -17,6 +17,8 @@ const {
   applyLinuxComputerUseRendererAvailabilityPatch,
   applyLinuxAppUpdaterBridgePatch,
   applyLinuxAppUpdaterMenuPatch,
+  applyLinuxAvatarOverlayMouseEventsPatch,
+  applyLinuxAvatarOverlayTightBoundsPatch,
   applyLinuxFileManagerPatch,
   applyLinuxQuitGuardPatch,
   applyLinuxHotkeyWindowPrewarmPatch,
@@ -45,6 +47,8 @@ const alreadyOpaqueBackgroundBundle =
   "process.platform===`linux`?{backgroundColor:e?t:n,backgroundMaterial:null}:{backgroundColor:r,backgroundMaterial:null}";
 const opaqueBackgroundBundleWithDriftingGw =
   "var cM=`#00000000`,lM=`#000000`,uM=`#f9f9f9`;function OM(e){return e===`avatarOverlay`||e===`browserCommentPopup`}function jM({platform:e,appearance:t,opaqueWindowsEnabled:n,prefersDarkColors:r}){return e===`win32`&&!OM(t)?n?{backgroundColor:r?lM:uM,backgroundMaterial:`none`}:{backgroundColor:cM,backgroundMaterial:`mica`}:{backgroundColor:cM,backgroundMaterial:null}}function gw(e){return e.page==null?e.snapshot.url:mw(e.page)}";
+const avatarOverlayMouseEventsBundle =
+  "createWindow(){return this.windowManager.createWindow({appearance:`avatarOverlay`,initialRoute:pO})}broadcastOpenState(){this.windowManager.sendMessageToAllRegisteredWindows({type:`avatar-overlay-open-state-changed`,isOpen:this.isOpen()})}applyPointerInteractivityPolicy(){let e=this.window;if(e==null||e.isDestroyed()){this.mousePassthroughEnabled=!1;return}let t=!this.pointerInteractive;if(this.mousePassthroughEnabled!==t){if(this.mousePassthroughEnabled=t,t){e.setIgnoreMouseEvents(!0,{forward:!0});return}e.setIgnoreMouseEvents(!1),this.refreshCursorAtCurrentMousePosition(e)}}applyHomeInteractivityPolicy(){let e=!this.homePointerInteractive;if(this.homeMousePassthroughEnabled!==e){this.homeMousePassthroughEnabled=e,e?this.homeWindow.setIgnoreMouseEvents(!0,{forward:!0}):this.homeWindow.setIgnoreMouseEvents(!1)}}";
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -166,6 +170,27 @@ test("uses the local transparent appearance predicate for Linux opaque backgroun
 
   assert.match(patched, /e===`linux`&&!OM\(t\)\?\{backgroundColor:r\?lM:uM/);
   assert.doesNotMatch(patched, /process\.platform===`linux`&&!gw\(t\)/);
+});
+
+test("keeps avatar overlay mouse events enabled on Linux without touching hotkey passthrough", () => {
+  const patched = applyPatchTwice(
+    applyLinuxAvatarOverlayMouseEventsPatch,
+    avatarOverlayMouseEventsBundle,
+  );
+
+  assert.match(patched, /let t=process\.platform!==`linux`&&!this\.pointerInteractive/);
+  assert.match(
+    patched,
+    /let e=!this\.homePointerInteractive;if\(this\.homeMousePassthroughEnabled!==e\)/,
+  );
+});
+
+test("shrinks avatar overlay viewport to tight mascot bounds on Linux", () => {
+  const source = 'YD={width:356,height:320}';
+  const patched = applyPatchTwice(applyLinuxAvatarOverlayTightBoundsPatch, source);
+
+  assert.match(patched, /process\.platform===`linux`\?\{width:148,height:157\}:\{width:356,height:320\}/);
+  assert.doesNotMatch(patched, /^YD=\{width:356,height:320\}$/);
 });
 
 test("adds Linux window icon handling when an icon asset is available", () => {
