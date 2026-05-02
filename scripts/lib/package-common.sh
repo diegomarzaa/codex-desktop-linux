@@ -105,6 +105,7 @@ stage_common_package_files() {
 
     rm -rf "$app_root"
     cp -aT "$APP_DIR" "$app_root"
+    chmod 4755 "$app_root/chrome-sandbox" 2>/dev/null || true
     mkdir -p "$app_root/.codex-linux"
     cp "$ICON_SOURCE" "$app_root/.codex-linux/$PACKAGE_NAME.png"
     render_desktop_entry "$root/usr/share/applications/$PACKAGE_NAME.desktop"

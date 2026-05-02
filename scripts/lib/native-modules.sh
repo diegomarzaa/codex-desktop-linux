@@ -104,7 +104,13 @@ download_electron() {
     mkdir -p "$INSTALL_DIR"
     cd "$INSTALL_DIR"
     unzip -qo "$WORK_DIR/electron.zip"
+    chmod 4755 "$INSTALL_DIR/chrome-sandbox" 2>/dev/null || true
+
+    local runtime_version
+    runtime_version="$(ELECTRON_RUN_AS_NODE=1 "$INSTALL_DIR/electron" -p 'process.versions.electron || ""' 2>/dev/null || true)"
+    if [ "$runtime_version" != "$ELECTRON_VERSION" ]; then
+        error "Downloaded runtime validation failed: expected Electron $ELECTRON_VERSION, got ${runtime_version:-not-electron}. Clear the Electron cache and rebuild."
+    fi
 
     info "Electron ready"
 }
-
